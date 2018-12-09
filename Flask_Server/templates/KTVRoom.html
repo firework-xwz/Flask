@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>3D KTV Room</title>
+
+    <link rel="shortcut icon" href="../static/images/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous">
+    <link rel="stylesheet" href="../static/css/4.1.3/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../static/css/demo.css" />
+
+    <style>
+        div.msg_bbl {
+            background-color: #ddd;
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="content">
+        <!-- 歌单板块 -->
+        <div class="col-sm-4">
+            <div>
+                <h1>已点歌曲</h1>
+                <div id="holder" class="message_holder"></div>
+            </div>
+        </div>
+        <div class="col-sm-2" style="text-align:-webkit-center">
+            <div>
+                <img id="albumCover" class="album_cover" src="../static/images/xxy.jpg" alt="Some image" />
+            </div>
+            <div style="position:relative">
+                <li onclick="playToggle()" class="hjr_button_icon play_button_icon"></li>
+                <li onclick="switchNext()" class="hjr_button_icon next_button_icon"></li>
+
+                <div class="overlay" id="overlayblock">
+                    <div>
+                        <p>房间里正在播放音乐，请查看周围环境决定是否播放</p>
+                        <button onclick="initPlay()" type="button" class="btn btn-outline-success" style="margin:auto;display:block">Play</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div id="lyricWrapper" style="display:inline-block">
+                <div id="lyricContainer">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- /container -->
+    <div class="upbar">
+        <div id="player">
+            <audio id="audio">!audio not supported :(</audio>
+        </div>
+        <div class="search-area">
+            <div class="search-box">
+                <input id="searchinput" class="search-box-input" type="text" placeholder="Search.." name="search">
+                <button class="search-button" onclick="DoMySearch()"><i class="fa fa-search"></i></button>
+            </div>
+            <div class="search-result">
+                <ul id="SearchResultList" class="result-list">
+                    <!-- search result -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="../static/plugins/jquery.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>-->
+    <script src="../static/plugins/socket.io.js"></script>
+
+    <script src="../static/js/MusicPlayer.js"></script>
+    <script src="../static/js/datasource.js"></script>
+    <script src="../static/js/SocketioClient.js"></script>
+    <script src="../static/js/ClientUI.js"></script>
+</body>
+
+</html>

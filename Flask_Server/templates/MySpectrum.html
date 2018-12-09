@@ -1,0 +1,240 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>音乐站</title>
+    <link href="../static/css/myaudio.css" rel="stylesheet" />
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../static/css/APlayer.min.css">
+    <script src="../static/plugins/APlayer.min.js"></script>
+
+    <script>
+        window.addEventListener("load", initAPlayer, false);
+        var ap;
+
+        function initAPlayer() {
+            ap = new APlayer({
+                container: document.getElementById('aplayer'),
+                listFolded: true,
+                listMaxHeight: 3,
+                lrcType: 1,
+                audio: []
+            });
+            ap.audio.setAttribute("crossorigin", "anonymous");
+
+            var input = document.getElementById("SearchInput");
+
+            input.addEventListener("keyup", function (event) {
+                event.preventDefault();
+                if (event.keyCode == 13) {
+                    StartSearch();
+                }
+            });
+
+            initCanvas();
+        }
+
+        function addSong(songname, singername, url, coverurl,lyric) {
+            ap.list.add([{
+                name: songname,
+                artist: singername,
+                url: url,
+                cover: coverurl,
+                lrc:lyric,
+                theme: '#ebd0c2'
+            }]);
+        }
+
+        function setlrc(songmid) {
+            var lyric = httpGet('http://127.0.0.1:5000/api/lyric/' + songmid);
+            ap.lrc = lyric;
+        }
+
+        var audio, canvas, ctx, context, analyser, source;
+        function initCanvas() {
+            audio = ap.audio;
+
+            context = new AudioContext(); // AudioContext object instance
+            analyser = context.createAnalyser(); // AnalyserNode method
+            canvas = document.getElementById('analyser_render');
+            ctx = canvas.getContext('2d');
+
+            // Re-route audio playback into the processing graph of the AudioContext
+            source = context.createMediaElementSource(audio);
+            source.connect(analyser);
+            analyser.connect(context.destination);
+            //initsongs();
+
+            frameLooper();
+        }
+
+        // frameLooper() animates any style of graphics you wish to the audio frequency
+        // Looping at the default frame rate that the browser provides(approx. 60 FPS)
+        var fbc_array, bar_x, bar_height, bar_width = 10, barNum = 128;
+        function frameLooper() {
+            window.webkitRequestAnimationFrame(frameLooper);
+            fbc_array = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(fbc_array);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);                       // Clear the canvas
+            ctx.fillStyle = "#FFFFFF";                                              // Color of the bars
+            for (var i = 0; i < barNum; i++) {
+                bar_x = i * 12;
+                bar_height = fbc_array[i] / 2;
+                ctx.fillRect(bar_x, canvas.height - bar_height - 3, bar_width, 3)   //  fillRect( x, y, width, height )
+                //ctx.fillRect(bar_x, canvas.height, bar_width, -bar_height + 3)
+            }
+        }
+
+        //var mids = new Array("003OUlho2HcRHC", "001zMQr71F1Qo8", "002WCV372JMZJw") //gbqq,yq,wtny
+
+        function MouseOverListItem() {
+            this.classList.add("Listview_item__hover");
+        }
+
+        function MouseOutListItem() {
+            this.classList.remove("Listview_item__hover");
+        }
+
+        function httpGet(theUrl) {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open("GET", theUrl, false); // false for synchronous request
+            xmlHttp.send(null);
+            return xmlHttp.responseText;
+        }
+
+        function play(index) {
+            jsonobj = JSON.parse(httpGet("http://127.0.0.1:5000/api/key"));
+            var key = jsonobj["key"];
+            var songurl = "http://101.227.216.142/amobile.music.tc.qq.com/C100" + songarray[index].songmid + ".m4a?vkey=" + key + "&guid=3757070001&uid=0&fromtag=30";
+            var coverurl = "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + songarray[index].albummid + ".jpg?max_age=2592000";
+            var lyric = httpGet('http://127.0.0.1:5000/api/lyric/' + songarray[index].songmid);
+            addSong(songarray[index].name, songarray[index].singer, songurl, coverurl,lyric);
+            ap.skipForward();
+            ap.play();
+        }
+
+        function download(index) {
+            var a = document.createElement("a");
+            a.setAttribute("href", httpGet("http://111.231.107.125:9000/api/urlof/" + songarray[index].songmid));
+            a.setAttribute("download", "fuck.mp3");
+            a.click();
+        }
+
+        function addSongInList(songname, albumname, singersname, timespan, index) {
+            var newli = document.createElement("li");
+            var newlistitem = document.createElement("div");
+            newlistitem.classList.add("Listview_item");
+            newlistitem.addEventListener("mouseover", MouseOverListItem);
+            newlistitem.addEventListener("mouseout", MouseOutListItem);
+
+            var newitemblock = document.createElement("div");
+            newitemblock.classList.add("list_itemblock");
+
+            var newitemsong = document.createElement("div");
+            newitemsong.classList.add("list_songname");
+            newitemsong.innerText = songname;
+            var buttonscontainer = document.createElement("div");
+            buttonscontainer.classList.add("hovershow");
+
+            var playbutton = document.createElement("i");
+            playbutton.className += "button_icon play_button_icon";                                 //play icon
+            playbutton.onclick = function () { play(index); };
+
+            var downloadbutton = document.createElement("i");
+            downloadbutton.className += "button_icon download_button_icon";                         //download icon
+            downloadbutton.onclick = function () { download(index); };
+
+            buttonscontainer.appendChild(playbutton);
+            buttonscontainer.appendChild(downloadbutton);
+            newitemsong.appendChild(buttonscontainer);
+
+            var newitemalbum = document.createElement("div");
+            newitemalbum.classList.add("list_album");
+            newitemalbum.innerText = albumname;
+            var newitemsingers = document.createElement("div");
+            newitemsingers.classList.add("list_singers");
+            newitemsingers.innerText = singersname;
+            var newitemtime = document.createElement("div");
+            newitemtime.classList.add("list_time");
+            newitemtime.innerText = timespan;
+            newlistitem.appendChild(newitemblock);
+            newlistitem.appendChild(newitemsong);
+            newlistitem.appendChild(newitemalbum);
+            newlistitem.appendChild(newitemsingers);
+            newlistitem.appendChild(newitemtime);
+
+            newli.appendChild(newlistitem);
+            document.getElementById("listContainer").appendChild(newli);
+        }
+
+
+        var songarray;
+        function StartSearch() {
+            songarray = new Array();
+
+            document.getElementById("listContainer").innerHTML = "";
+            var searchkey = document.getElementById("SearchInput").value;
+            jsonobj = JSON.parse(httpGet("http://127.0.0.1:5000/api/search/" + searchkey));
+            var list = jsonobj["data"]["song"]["list"];
+            for (var index = 0; index < list.length; index++) {
+                var song = list[index];
+
+                var singersstr = "";
+                var singers = song["singer"];
+                for (var i = 0; i < singers.length; i++) {
+                    var singer = singers[i];
+                    singersstr += singer["name"];
+                }
+
+                var songtime;
+                if (song["interval"] % 60 > 9) {
+                    songtime = (parseInt(song["interval"] / 60)).toString() + ":" + (song["interval"] % 60).toString();
+                } else {
+                    songtime = (parseInt(song["interval"] / 60)).toString() + ":0" + (song["interval"] % 60).toString();
+                }
+
+                addSongInList(song["songname"], song["albumname"], singersstr, songtime, index);
+                songarray.push({
+                    name: song["songname"],
+                    singer: singersstr,
+                    songmid: song["songmid"],
+                    albummid: song["albummid"],
+                })
+            }
+        }
+    </script>
+
+    <style>
+
+    </style>
+</head>
+
+<body>
+    <div class="bgimg-1">
+        <div>
+            <input class="hjr_input" type="text" id="SearchInput" placeholder="搜索歌手、专辑、mv">
+        </div>
+        <div style="height:150px;">
+            <canvas class="SpectrumArea" id="analyser_render" width="1200" height="150"></canvas>
+        </div>
+        <div style="margin:auto;width:90%">
+            <div style="background: rgba(0, 0, 0, 0.5);height:100%">
+                <div class="listhead">
+                    <div class="list_itemblock"></div>
+                    <div class="list_songname">歌曲</div>
+                    <div class="list_album">专辑</div>
+                    <div class="list_singers">歌手</div>
+                    <div class="list_time">时长</div>
+                </div>
+                <div class="listview">
+                    <ul style="list-style-type:none; padding-inline-start: 0;" id="listContainer">
+                    </ul>
+                </div>
+            </div>
+        </div>
+    <div id="aplayer" style="bottom:0%; position:absolute; right:0%;left:0%"></div>
+    </div>
+</body>
+
+</html>

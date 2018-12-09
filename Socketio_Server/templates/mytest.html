@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Online KTV</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous">
+
+    <style>
+        div.msg_bbl {
+            background-color: #ddd;
+            padding: 5px 10px;
+            border-radius: 10px;
+            color: #555;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="text-center well"><b>点歌台模块.</b></div>
+
+    <div class="container">
+        <div class="col-sm-8">
+            <div class="no_message">
+                <h1 style='color: #ccc'>没有任何消息..</h1>
+                <div id="holder" class="message_holder"></div>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <form>
+                <b>输入你的用户名 <span class="glyphicon glyphicon-arrow-down"></span></b>
+                <div class="clearfix" style="margin-top: 5px;"></div>
+                <input id='username' type="text" class="username form-control" placeholder="User Name">
+                <div style="padding-top: 5px;"></div>
+
+                <b>输入歌曲名和歌手就可以点歌 <span class="glyphicon glyphicon-arrow-down"></span></b>
+                <div class="clearfix" style="margin-top: 5px;"></div>
+                <input type="text" class="songname form-control" placeholder="歌曲">
+                <div style="padding-top: 5px;"></div>
+                <input type="text" class="singer form-control" placeholder="歌手">
+                <div style="padding-top: 5px;"></div>
+                <button onclick='wantadd()' class="btn btn-success btn-block"><span class="glyphicon glyphicon-send"></span> 点歌</button>
+
+                <b>输入序号从歌单中删除或置顶序号对应的歌曲<span class="glyphicon glyphicon-arrow-down"></span></b>
+                <div class="clearfix" style="margin-top: 5px;"></div>
+                <input type="text" class="songindex form-control" placeholder="歌曲序号">
+                <div style="padding-top: 5px;"></div>
+            </form>
+            <button onclick="wantremove()" class="btn btn-success btn-block"><span class="glyphicon glyphicon-remove"></span> 删除</button>
+            <button onclick='wantputtop()' class="btn btn-success btn-block"><span class="glyphicon glyphicon-arrow-up"></span> 置顶</button>
+        </div>
+    </div>
+
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="../static/js/jquery.min.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.7.3/socket.io.min.js"></script>-->
+    <script src="../static/js/socket.io.js"></script>
+    <script>
+        // 客户端信息
+        var ROOM_ID = 'asd3sacd';
+        var USN = 0;
+        var CLIENT_ID;
+        var USER = "Tony";
+
+        // 0. 先连接
+        var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+        /* 以下是各个事件的监听函数
+        */
+        // 1.监听 connect 事件，连结服务器，加入房间
+        socket.on('connect', function () {
+            CLIENT_ID = socket.id;
+            socket.emit('join', { 'room': ROOM_ID })
+        });
+
+        // 2. 监听 initsongs 事件，服务器返回已点歌曲，初始化客户端点歌台 UI
+        /* 以下为服务器返回的数据格式
+        data{
+            list:[                   (array) 每个元素是一个 {'song':{},'owner':str} 这样的结构
+                {
+                    song:{
+                        name:        (str)
+                        singer:      (str)
+                        interval:    <int>
+                        songmid:     (str)
+                    }
+                    owner:           (str)    点这首歌的用户名
+                },
+                {},{},,,{}
+            ]
+        }
+        */
+        socket.on('initsongs', function (data) {
+            $('h1').remove();
+            data.list.forEach(UIaddsong);
+        });
+
+        // 3. 监听 operatefail 事件，操作失败
+        socket.on('operatefail', function (msg) {
+            // operation failure
+            alert(msg);
+        });
+
+        // 4. 监听 operation 事件，有新操作，更新点歌台 UI
+        /* 以下为服务器返回的数据格式
+        data{
+            username:        (str)
+            clinetid:        (str)
+            room:            (str)
+            usn:             <int>
+            
+            category:        (str)
+            song: {
+                name:        (str)
+                singer:      (str)
+                interval:    <int>
+                songmid:     (str)
+            }   
+            index:           <int>
+        }
+        */
+        socket.on('message', function (data) {
+            // 有人点歌
+            if (data.category === "add") {
+                // addsong 只是调用的 demo，可以自己改，它的作用就是根据返回的 data 更新 UI
+                UIaddsong({
+                    'song': data.song,
+                    'owner': data.username
+                });
+            }
+            if (data.category === "remove") {
+                // remove 只是调用的 demo，可以自己改，它的作用就是根据返回的 data 更新 UI
+                UIremove(data.index);
+            }
+            if (data.category === "puttop") {
+                if (data.index > 0) {
+                    UIputtop(data.index);
+                }
+            }
+        });
+
+
+        /* 
+        以下是发送消息部分，协议中的参数结构
+            operations = {
+                'add':addsong,
+                'remove':remove,
+                'puttop':puttop
+            }
+
+            data{
+                username:        (str)
+                clinetid:        (str)
+                room:            (str)
+                usn:             <int>
+                
+                category:        (str)
+                song: {
+                    name:        (str)
+                    singer:      (str)
+                    interval:    <int>
+                    songmid:     (str)
+                }   
+                index:           <int>
+            }
+        */
+        // 1. 发送 add 指令给服务器，参数为歌曲信息
+        function sendToServer_add(song) {
+            socket.emit('operate', {
+                'username': USER,
+                'clinetid': CLIENT_ID,
+                'room': ROOM_ID,
+                'usn': USN,
+
+                'category': 'add',
+                'song': song,
+                'index': null
+            });
+        }
+
+        // 2. 发送 remove 指令给服务器，参数为歌曲下标
+        function sendToServer_remove(index) {
+            if (typeof index != 'number') {
+                index = parseInt(index);
+            }
+            socket.emit('operate', {
+                'username': USER,
+                'clinetid': CLIENT_ID,
+                'room': ROOM_ID,
+                'usn': USN,
+
+                'category': 'remove',
+                'song': null,
+                'index': index
+            });
+        }
+
+        // 3. 发送 puttop 指令给服务器，参数为歌曲下标
+        function sendToServer_puttop(index) {
+            if (typeof index != 'number') {
+                index = parseInt(index);
+            }
+            socket.emit('operate', {
+                'username': USER,
+                'clinetid': CLIENT_ID,
+                'room': ROOM_ID,
+                'usn': USN,
+
+                'category': 'puttop',
+                'song': null,
+                'index': index
+            });
+        }
+
+
+        /* 以下是客户端调用 demo */
+        function wantadd() {
+            if ($('input.username').val() != "") {
+                USER = document.getElementById('username').value;
+
+                var songname = $('input.songname').val();
+                var singer = $('input.singer').val();
+
+                var newsong = {
+                    'name': songname,
+                    'singer': singer,
+                    'interval': '3:50',
+                    'songmid': 'AD33ddfr34ruyj'
+                }
+                sendToServer_add(newsong);
+            }
+            else{
+                alert('请输入用户名');
+            }
+        }
+
+        function wantremove() {
+            var _index = parseInt($('input.songindex').val());
+            sendToServer_remove(_index);
+        }
+
+        function wantputtop() {
+            var _index = parseInt($('input.songindex').val());
+            sendToServer_puttop(_index);
+        }
+
+
+        /* 以下是客户端收到消息更新 UI 的 demo，在接收消息的函数里调用 */
+        function UIaddsong(_song) {
+            let text = '<div class="msg_bbl"><b>' + _song.owner + '</b> ' + _song.song.name + _song.song.singer + '</div>';
+            $('div.message_holder').append(text);
+        }
+
+        function UIputtop(index) {
+            child = document.getElementById('holder').childNodes[index];
+            document.getElementById('holder').removeChild(child);
+            document.getElementById('holder').insertBefore(child, document.getElementById('holder').childNodes[0]);
+        }
+
+        function UIremove(index) {
+            child = document.getElementById('holder').childNodes[index];
+            document.getElementById('holder').removeChild(child);
+        }
+    </script>
+</body>
+
+</html>
