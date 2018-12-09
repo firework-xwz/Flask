@@ -11,7 +11,7 @@ it provide
 it provides
 + online KTV
 
-**SDK is from leancloud**
+**SDK is from [leancloud](https://leancloud.cn/docs/realtime_guide-js.html)**
 it provides
 + users management(login/register)
 + chatroom
