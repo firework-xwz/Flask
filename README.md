@@ -10,3 +10,9 @@ it provide
 **Socketio_Server is server2**
 it provides
 + online KTV
+
+**SDK is from leancloud**
+it provides
++ users management(login/register)
++ chatroom
++ roomsmanager
